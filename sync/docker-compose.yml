@@ -4,7 +4,7 @@ version: "3.3"
 services:
   primary:
     hostname: 'primary'
-    image: crunchydata/crunchy-postgres:centos7-10.9-2.4.1
+    image: postgres:11
     environment:
     - PGHOST=/tmp
     - MAX_CONNECTIONS=10
@@ -20,16 +20,18 @@ services:
     volumes:
     - pg-primary-vol:/pgdata
     ports:
-    - "5432"
+    - "32768:5432"
     networks:
-    - crunchynet
+    - postgresql
+    restart: 
+        unless-stopped
     deploy:
       placement:
         constraints:
         - node.labels.type == primary
         - node.role == worker
   replica:
-    image: crunchydata/crunchy-postgres:centos7-10.9-2.4.1
+    image: postgres:11
     environment:
     - PGHOST=/tmp
     - MAX_CONNECTIONS=10
@@ -46,16 +48,18 @@ services:
     volumes:
     - pg-replica-vol:/pgdata
     ports:
-    - "5432"
+    - "32769:5432"
     networks:
-    - crunchynet
+    - postgresql
+    restart: 
+        unless-stopped
     deploy:
       placement:
         constraints:
         - node.labels.type != primary
         - node.role == worker
 networks:
-  crunchynet:
+  postgresql:
 
 volumes:
   pg-primary-vol:

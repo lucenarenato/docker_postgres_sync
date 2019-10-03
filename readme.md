@@ -1,4 +1,5 @@
 # Creating a PostgreSQL Cluster with Docker Swarm
+<p align="center"><img src="Diagram4.png"></p>
 
 This example only works on a Docker Swarm of version 1.12 or
 greater. Please see link:https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm 

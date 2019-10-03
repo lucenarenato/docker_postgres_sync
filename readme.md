@@ -9,24 +9,28 @@ This *run.sh* script is run on the Swarm Manager node.
 
 - docker swarm init
 
-docker swarm join --token SWMTKN-1-2tlc5e5giqf78blvh0gdg3apclemct4tly9hvm6m14726nwdxb-3wiezilvzghrvqekjwc9r0z1j 10.1.1.20:2377
+- docker swarm join --token SWMTKN-1-2tlc5e5giqf78blvh0gdg3apclemct4tly9hvm6m14726nwdxb-3wiezilvzghrvqekjwc9r0z1j 10.1.1.20:2377
 
 
-docker swarm join-token manager
+- docker swarm join-token manager
 
-docker stack deploy --compose-file=./docker-compose.yml pg-stack
+- docker stack deploy --compose-file=./docker-compose.yml pg-stack
 
 ## To check if services are running, run the following commands:
-docker service ls
-docker service ps pg-stack_primary
-docker service ps pg-stack_replica
+- docker service ls
+- docker service ps pg-stack_primary
+- docker service ps pg-stack_replica
 
 ## To increase the number of replicas, run the following:
-docker service scale pg-stack_replica=2
-docker service ps pg-stack_replica
+- docker service scale pg-stack_replica=2
+- docker service ps pg-stack_replica
 
 ## Para verificar se as réplicas estão fluindo, consulte o PostgreSQL primário no host worker1 usando o seguinte comando:
-docker exec -it $(docker ps -q) psql -U postgres -x -c 'table pg_stat_replication' postgres
+- docker exec -it $(docker ps -q) psql -U postgres -x -c 'table pg_stat_replication' postgres
 
-docker-compose up
+- docker-compose up
+
+## Stop
+- docker stop $(docker ps -a -q)
+- sudo service docker stop
 

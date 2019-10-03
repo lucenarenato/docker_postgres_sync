@@ -1,7 +1,10 @@
+---
+version: "3.3"
+
 services:
   primary:
     hostname: 'primary'
-    image: crunchydata/crunchy-postgres:centos7-11.4-2.4.1
+    image: crunchydata/crunchy-postgres:centos7-10.9-2.4.1
     environment:
     - PGHOST=/tmp
     - MAX_CONNECTIONS=10
@@ -15,21 +18,18 @@ services:
     - PG_ROOT_PASSWORD=password
     - PG_PRIMARY_PORT=5432
     volumes:
-         - type: volume
-        source: codebase-primary
+    - pg-primary-vol:/pgdata
     ports:
     - "32768:5432"
     networks:
-	  - default
-    restart: 
-        unless-stopped
+    - crunchynet
     deploy:
       placement:
         constraints:
         - node.labels.type == primary
         - node.role == worker
   replica:
-    image: crunchydata/crunchy-postgres:centos7-11.4-2.4.1
+    image: crunchydata/crunchy-postgres:centos7-10.9-2.4.1
     environment:
     - PGHOST=/tmp
     - MAX_CONNECTIONS=10
@@ -44,25 +44,19 @@ services:
     - PG_PASSWORD=password
     - PG_ROOT_PASSWORD=password
     volumes:
-    - type: volume
-        source: codebase-replica
+    - pg-replica-vol:/pgdata
     ports:
     - "32769:5432"
     networks:
-	- default
-    restart: 
-        unless-stopped
+    - crunchynet
     deploy:
       placement:
         constraints:
         - node.labels.type != primary
         - node.role == worker
 networks:
-  default:
+  crunchynet:
 
 volumes:
-  codebase-primary:
-    name: codebase-primary
-  codebase-replica:
-    name: codebase-replica
-
+  pg-primary-vol:
+  pg-replica-vol:

@@ -1,5 +1,3 @@
-version: "3.3"
-
 services:
   primary:
     hostname: 'primary'
@@ -17,11 +15,12 @@ services:
     - PG_ROOT_PASSWORD=password
     - PG_PRIMARY_PORT=5432
     volumes:
-    - pg-primary-vol:/pgdata
+         - type: volume
+        source: codebase-primary
     ports:
     - "32768:5432"
     networks:
-    - postgresql
+	  - default
     restart: 
         unless-stopped
     deploy:
@@ -45,11 +44,12 @@ services:
     - PG_PASSWORD=password
     - PG_ROOT_PASSWORD=password
     volumes:
-    - pg-replica-vol:/pgdata
+    - type: volume
+        source: codebase-replica
     ports:
     - "32769:5432"
     networks:
-    - postgresql
+	- default
     restart: 
         unless-stopped
     deploy:
@@ -58,8 +58,11 @@ services:
         - node.labels.type != primary
         - node.role == worker
 networks:
-  postgresql:
+  default:
 
 volumes:
-  pg-primary-vol:
-  pg-replica-vol:
+  codebase-primary:
+    name: codebase-primary
+  codebase-replica:
+    name: codebase-replica
+

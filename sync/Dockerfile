@@ -1,80 +1,117 @@
-FROM centos:7
+FROM alpine:3.8
+ADD shadow/passwd /etc/passwd
+ADD shadow/group /etc/group
+RUN set -ex; \
+	postgresHome="$(getent passwd postgres)"; \
+	postgresHome="$(echo "$postgresHome" | cut -d: -f6)"; \
+	[ "$postgresHome" = '/var/lib/postgresql' ]; \
+	mkdir -p "$postgresHome"; \
+	chown -R postgres:postgres "$postgresHome"
+ENV LANG en_US.utf8
+RUN mkdir /docker-entrypoint-initdb.d
+ENV PG_MAJOR 11
+ENV PG_VERSION 11.1
+ENV PG_SHA256 90815e812874831e9a4bf6e1136bf73bc2c5a0464ef142e2dfea40cda206db08
+RUN set -ex \
+	\
+	&& apk add --no-cache --virtual .fetch-deps \
+		ca-certificates \
+		openssl \
+		tar \
+		openssh mc \
+		curl \
+        ncdu \
+        tree \
+        vim \
+	\
+	&& wget -O postgresql.tar.bz2 "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2" \
+	&& echo "$PG_SHA256 *postgresql.tar.bz2" | sha256sum -c - \
+	&& mkdir -p /usr/src/postgresql \
+	&& tar \
+		--extract \
+		--file postgresql.tar.bz2 \
+		--directory /usr/src/postgresql \
+		--strip-components 1 \
+	&& rm postgresql.tar.bz2 \
+	\
+	&& apk add --no-cache --virtual .build-deps \
+		bison \
+		coreutils \
+		dpkg-dev dpkg \
+		flex \
+		gcc \
+		libc-dev \
+		libedit-dev \
+		libxml2-dev \
+		libxslt-dev \
+		make \
+		openssl-dev \
+		openssh mc \
+		perl-utils \
+		perl-ipc-run \
+		util-linux-dev \
+		zlib-dev \
+		icu-dev \
+	\
+	&& cd /usr/src/postgresql \
+	&& awk '$1 == "#define" && $2 == "DEFAULT_PGSOCKET_DIR" && $3 == "\"/tmp\"" { $3 = "\"/var/run/adagio-live\""; print; next } { print }' src/include/pg_config_manual.h > src/include/pg_config_manual.h.new \
+	&& grep '/var/run/adagio-live' src/include/pg_config_manual.h.new \
+	&& mv src/include/pg_config_manual.h.new src/include/pg_config_manual.h \
+	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
+	&& wget -O config/config.guess 'https://git.savannah.gnu.org/cgit/config.git/plain/config.guess?id=7d3d27baf8107b630586c962c057e22149653deb' \
+	&& wget -O config/config.sub 'https://git.savannah.gnu.org/cgit/config.git/plain/config.sub?id=7d3d27baf8107b630586c962c057e22149653deb' \
+	&& ./configure \
+		--build="$gnuArch" \
+		--enable-integer-datetimes \
+		--enable-thread-safety \
+		--enable-tap-tests \
+		--disable-rpath \
+		--with-uuid=e2fs \
+		--with-gnu-ld \
+		--with-pgport=5432 \
+		--with-system-tzdata=/usr/share/zoneinfo \
+		--prefix=/usr/local \
+		--with-includes=/usr/local/include \
+		--with-libraries=/usr/local/lib \
+		\
+		--with-openssl \
+		--with-libxml \
+		--with-libxslt \
+		--with-icu \
+	&& make -j "$(nproc)" world \
+	&& make install-world \
+	&& make -C contrib install \
+	\
+	&& runDeps="$( \
+		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
+			| tr ',' '\n' \
+			| sort -u \
+			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
+	)" \
+	&& apk add --no-cache --virtual .postgresql-rundeps \
+		$runDeps \
+		bash \
+		su-exec \
+		tzdata \
+	&& apk del .fetch-deps .build-deps \
+	&& cd / \
+	&& rm -rf \
+		/usr/src/postgresql \
+		/usr/local/share/doc \
+		/usr/local/share/man \
+	&& find /usr/local -name '*.a' -delete
+RUN apk --no-cache add \
+        curl \
+        ncdu \
+        openssl \
+        tree \
+        vim
+RUN sed -ri "s!^#?(listen_addresses)\s*=\s*\S+.*!\1 = '*'!" /usr/local/share/postgresql/postgresql.conf.sample
+ENV PGDATA /var/lib/postgresql/data
+RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 777 "$PGDATA" # this 777 will be replaced by 700 at runtime (allows semi-arbitrary "--user" values)
+RUN mkdir -p /var/lib/postgresql/data/pg_log
+COPY docker-entrypoint.sh /usr/local/bin/
+COPY postgresql.conf /var/lib/postgresql/data/
+RUN ln -s usr/local/bin/docker-entrypoint.sh / # backwards compat
+ENTRYPOINT ["docker-entrypoint.sh"]
 
-LABEL name="crunchydata/postgres" \
-        vendor="crunchy data" \
-	PostgresVersion="11" \
-	PostgresFullVersion="11.4" \
-	Version="7.6" \
-	Release="2.4.1" \
-        url="https://crunchydata.com" \
-	summary="PostgreSQL 11.4 (PGDG) on a Centos7 base image" \
-        description="Allows multiple deployment methods for PostgreSQL, including basic single primary, streaming replication with synchronous and asynchronous replicas, and stateful sets. Includes utilities for Auditing (pgaudit), statement tracking, and Backup / Restore (pgbackrest, pg_basebackup)." \
-        io.k8s.description="postgres container" \
-        io.k8s.display-name="Crunchy postgres container" \
-        io.openshift.expose-services="" \
-        io.openshift.tags="crunchy,database"
-
-ENV PGVERSION="11" PGDG_REPO="pgdg-redhat-repo-latest.noarch.rpm" PGDG_REPO_DISABLE="pgdg10,pgdg96,pgdg95,pgdg94" \
-    BACKREST_VERSION="2.13"
-
-RUN rpm -Uvh https://download.postgresql.org/pub/repos/yum/${PGVERSION}/redhat/rhel-7-x86_64/${PGDG_REPO}
-
-RUN yum -y update \
- && yum -y install epel-release \
- && yum -y update glibc-common \
- && yum -y install bind-utils \
-    gettext \
-    hostname \
-    procps-ng  \
-    rsync \
-    psmisc openssh-server openssh-clients \
- && yum -y install --disablerepo="${PGDG_REPO_DISABLE}" \
-    postgresql11-server postgresql11-contrib postgresql11 \
-    pgaudit13_11 \
-    pgbackrest-"${BACKREST_VERSION}" \
- && yum -y clean all
-
-ENV PGROOT="/usr/pgsql-${PGVERSION}"
-
-# add path settings for postgres user
-# bash_profile is loaded in login, but not with exec
-# bashrc to set permissions in OCP when using exec
-# HOME is / in OCP
-ADD conf/.bash_profile /var/lib/pgsql/
-ADD conf/.bashrc /var/lib/pgsql
-ADD conf/.bash_profile /
-ADD conf/.bashrc /
-
-RUN mkdir -p /opt/cpm/bin /opt/cpm/conf /pgdata /pgwal /pgconf /recover /backrestrepo
-
-RUN chown -R postgres:postgres /opt/cpm /var/lib/pgsql \
-    /pgdata /pgwal /pgconf /recover /backrestrepo &&  \
-    chmod -R g=u /opt/cpm /var/lib/pgsql \
-    /pgdata /pgwal /pgconf /recover /backrestrepo
-
-# add volumes to allow override of pg_hba.conf and postgresql.conf
-# add volumes to offer a restore feature
-# add volumes to allow storage of postgres WAL segment files
-# add volumes to locate WAL files to recover with
-# add volumes for pgbackrest to write to
-
-VOLUME ["/sshd", "/pgconf", "/pgdata", "/pgwal", "/recover", "/backrestrepo"]
-
-# open up the postgres port
-EXPOSE 5432
-
-ADD bin/postgres /opt/cpm/bin
-ADD bin/common /opt/cpm/bin
-ADD conf/postgres /opt/cpm/conf
-ADD tools/pgmonitor/exporter/postgres /opt/cpm/bin/modules
-
-RUN chmod g=u /etc/passwd && \
-	chmod g=u /etc/group
-
-RUN mkdir /.ssh && chown 26:0 /.ssh && chmod g+rwx /.ssh
-
-ENTRYPOINT ["/opt/cpm/bin/uid_postgres.sh"]
-
-USER 26
-
-CMD ["/opt/cpm/bin/start.sh"]

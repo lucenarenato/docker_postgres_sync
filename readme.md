@@ -34,3 +34,13 @@ This *run.sh* script is run on the Swarm Manager node.
 - docker stop $(docker ps -a -q)
 - sudo service docker stop
 
+- docker-compose --version
+- grep version docker-compose.yml
+
+## docker composer
+
+- sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+- sudo chmod +x /usr/local/bin/docker-compose
+- sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+- hash -d docker-compose
+

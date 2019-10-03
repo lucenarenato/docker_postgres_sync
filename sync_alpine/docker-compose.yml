@@ -9,12 +9,12 @@ services:
     - MAX_CONNECTIONS=10
     - MAX_WAL_SENDERS=5
     - PG_MODE=primary
-    - PG_PRIMARY_USER=erato_19!@%
-    - PG_PRIMARY_PASSWORD=R*vkVy%KJOiq^DdZzBQQj4RpoqWflP
+    - PG_PRIMARY_USER=primaryuser
+    - PG_PRIMARY_PASSWORD=password
     - PG_DATABASE=testdb
-    - PG_USER=klios
-    - PG_PASSWORD=positivo95612612
-    - PG_ROOT_PASSWORD=TT#OIsv0UkzoayAYP2#96kK@AB^bxn
+    - PG_USER=testuser
+    - PG_PASSWORD=password
+    - PG_ROOT_PASSWORD=password
     - PG_PRIMARY_PORT=5432
     volumes:
     - pg-primary-vol:/pgdata
@@ -36,12 +36,12 @@ services:
     - PG_MODE=replica
     - PG_PRIMARY_HOST=primary
     - PG_PRIMARY_PORT=5432
-    - PG_PRIMARY_USER=erato_19!@%
-    - PG_PRIMARY_PASSWORD=R*vkVy%KJOiq^DdZzBQQj4RpoqWflP
-    - PG_DATABASE=klios
-    - PG_USER=renato
-    - PG_PASSWORD=positivo95612612
-    - PG_ROOT_PASSWORD=TT#OIsv0UkzoayAYP2#96kK@AB^bxn
+    - PG_PRIMARY_USER=primaryuser
+    - PG_PRIMARY_PASSWORD=password
+    - PG_DATABASE=testdb
+    - PG_USER=testuser
+    - PG_PASSWORD=password
+    - PG_ROOT_PASSWORD=password
     volumes:
     - pg-replica-vol:/pgdata
     ports:

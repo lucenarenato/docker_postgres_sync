@@ -57,7 +57,7 @@ sudo docker rm ${SYNC_CONTAINER_NAME}
 docker volume rm ${SYNC_CONTAINER_NAME}-pgdata
 
 sudo docker run \
-	-p 12011:5432 \
+	-p 32768:5432 \
 	-v ${SYNC_CONTAINER_NAME}-pgdata:/pgdata \
 	-e PGHOST=/tmp \
 	-e TEMP_BUFFERS=9MB \
@@ -87,7 +87,7 @@ sudo docker rm ${ASYNC_CONTAINER_NAME}
 docker volume rm ${ASYNC_CONTAINER_NAME}-pgdata
 
 sudo docker run \
-	-p 12012:5432 \
+	-p 32769:5432 \
 	-v ${ASYNC_CONTAINER_NAME}-pgdata:/pgdata \
 	-e PGHOST=/tmp \
 	-e TEMP_BUFFERS=9MB \

@@ -44,3 +44,10 @@ This *run.sh* script is run on the Swarm Manager node.
 - sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 - hash -d docker-compose
 
+- https://github.com/CrunchyData
+
+- apk add --no-cache \
+      bash \
+      vim
+
+# Renato Lucena - 2019
